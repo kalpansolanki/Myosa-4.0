@@ -47,9 +47,10 @@ The MYOSA kit is designed to make Internet of Things (IoT) learning simple, prac
 
 ### **Videos**
 
-<video controls width="100%">
-  <source src="/How to Upload Master Code in MYOSA Motherboard.mp4" type="video/mp4">
-</video>
+### **Video Demonstration**
+
+[![Watch the Video](https://img.youtube.com/vi/0q__X7cU18/0.jpg)]((https://www.youtube.com/watch?v=X0q__X7cU18))
+
 
 ---
 
