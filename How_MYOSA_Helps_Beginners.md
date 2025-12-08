@@ -45,12 +45,11 @@ The MYOSA kit is designed to make Internet of Things (IoT) learning simple, prac
   <i>MYOSA Motherboard used for IoT learning and development</i>
 </p>
 
-### **Videos**
-
 ### **Video Demonstration**
 
-[![Watch the Video](https://img.youtube.com/vi/0q__X7cU18/0.jpg)]((https://www.youtube.com/watch?v=X0q__X7cU18))
+[![Watch the MYOSA Master Code Upload Video](https://img.youtube.com/vi/X0q__X7cU18/maxresdefault.jpg)](https://www.youtube.com/watch?v=X0q__X7cU18)
 
+This video demonstrates the complete process of uploading the master code to the MYOSA motherboard, helping beginners get started quickly with their first IoT project.
 
 ---
 
