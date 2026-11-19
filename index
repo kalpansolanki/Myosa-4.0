@@ -1,0 +1,107 @@
+(
+set -e
+
+sudo apt-get install -y x11-utils x11-xserver-utils
+
+sudo install -d -m 755 /usr/local/lib/eposter
+
+sudo tee /usr/local/lib/eposter/wait_x11_ready.py >/dev/null <<'PY'
+#!/usr/bin/python3
+import os
+import re
+import subprocess
+import sys
+import time
+
+os.environ["LC_ALL"] = "C"
+
+
+def query(*args):
+    try:
+        return subprocess.check_output(
+            args, text=True, stderr=subprocess.DEVNULL, timeout=3
+        )
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return ""
+
+
+def window_id(text):
+    match = re.search(r"window id #\s*(0x[0-9a-fA-F]+)", text)
+    return int(match.group(1), 16) if match else 0
+
+
+def desktop_ready():
+    root = query("/usr/bin/xprop", "-root",
+                 "_NET_SUPPORTING_WM_CHECK", "_NET_SUPPORTED")
+    wm = window_id(root)
+    if not wm:
+        return False, "X11 session or window manager unavailable"
+
+    child = query("/usr/bin/xprop", "-id", hex(wm),
+                  "_NET_SUPPORTING_WM_CHECK")
+    if window_id(child) != wm:
+        return False, "window manager not ready"
+
+    atoms = set(re.findall(r"_NET_[A-Z0-9_]+", root))
+    if not {"_NET_WM_STATE", "_NET_WM_STATE_FULLSCREEN"} <= atoms:
+        return False, "window manager has not advertised fullscreen support"
+
+    output = query("/usr/bin/xrandr", "--current")
+    active = [line for line in output.splitlines()
+              if re.match(r"^\S+\s+connected\b", line)
+              and re.search(r"\b[1-9]\d*x[1-9]\d*[+-]\d+[+-]\d+", line)]
+    if not active:
+        return False, "no active display output"
+
+    return True, "WM=" + hex(wm) + "; " + "; ".join(active)
+
+
+def main():
+    for tool in ("/usr/bin/xprop", "/usr/bin/xrandr"):
+        if not os.access(tool, os.X_OK):
+            print("ePoster: missing " + tool, file=sys.stderr, flush=True)
+            return 1
+
+    print("ePoster: waiting for desktop fullscreen support", flush=True)
+    deadline = time.monotonic() + 120
+    detail = "desktop unavailable"
+
+    while time.monotonic() < deadline:
+        ready, detail = desktop_ready()
+        if ready:
+            print("ePoster: desktop ready; " + detail, flush=True)
+            return 0
+        time.sleep(1)
+
+    print("ePoster: startup readiness timed out: " + detail,
+          file=sys.stderr, flush=True)
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+PY
+
+sudo chmod 644 /usr/local/lib/eposter/wait_x11_ready.py
+
+# Check it against the working X11 session from your screenshots.
+sudo -u rock env \
+    DISPLAY=:1 \
+    XAUTHORITY=/run/user/1001/gdm/Xauthority \
+    /usr/bin/python3 /usr/local/lib/eposter/wait_x11_ready.py
+
+sudo install -d -m 755 \
+    /etc/systemd/system/eposter-display.service.d
+
+sudo tee /etc/systemd/system/eposter-display.service.d/99-desktop-ready.conf >/dev/null <<'EOF'
+[Service]
+TimeoutStartSec=150
+ExecStartPre=
+ExecStartPre=/usr/bin/test -x /home/rock/eposter/venv/bin/python3
+ExecStartPre=/usr/bin/python3 /usr/local/lib/eposter/wait_x11_ready.py
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl reset-failed eposter-display.service
+sudo systemctl restart eposter-display.service
+)
