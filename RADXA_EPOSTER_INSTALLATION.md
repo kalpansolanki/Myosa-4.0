@@ -453,7 +453,40 @@ mpv --version
 | IP address | Read it from that board with `hostname -I`. |
 
 Repeat the procedure on each new board, including Step 5. Do not copy another board's fixed display number, UID, or Xauthority path without detecting the new board's actual session.
+(
+set -e
 
+cd "$HOME/eposter"
+
+python3 - <<'PY'
+import ast
+from pathlib import Path
+
+path = Path("helper/display_handler.py")
+text = path.read_text()
+
+old = "resized = image.resize(size, Image.Resampling.LANCZOS)"
+new = (
+    'resized = ImageOps.pad(image, size, '
+    'method=Image.Resampling.LANCZOS, color="black", '
+    'centering=(0.5, 0.5))'
+)
+
+if text.count(old) == 1:
+    updated = text.replace(old, new, 1)
+    ast.parse(updated)
+    path.write_text(updated)
+    print("Applied image fitting without stretching.")
+elif "resized = ImageOps.pad(" in text:
+    print("Image fitting fix is already present; restarting the display.")
+else:
+    raise SystemExit(
+        "Expected image-resize code was not found. No changes were made."
+    )
+PY
+
+sudo systemctl restart eposter-display.service
+)
 Record the software revision for each deployment:
 
 ```bash
